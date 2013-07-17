@@ -294,17 +294,25 @@ describe("Cucumber.SupportCode.Library", function() {
     });
 
     describe("world constructor callback", function() {
-      var worldConstructorCompletionCallback;
+      var worldConstructorCompletionCallback, later;
 
       beforeEach(function() {
+        var globalObject = function() { return this; }();
         library.instantiateNewWorld(callback);
         worldConstructorCompletionCallback = worldConstructor.mostRecentCall.args[0];
-        spyOn(process, 'nextTick');
+
+        if (typeof setImmediate == 'function') {
+          spyOn(globalObject, 'setImmediate');
+          later = globalObject.setImmediate;
+        } else {
+          spyOn(process, 'nextTick');
+          later = process.nextTick;
+        }
       })
 
       it("registers a function for the next tick (to get out of the constructor call)", function() {
         worldConstructorCompletionCallback();
-        expect(process.nextTick).toHaveBeenCalledWithAFunctionAsNthParameter(1);
+        expect(later).toHaveBeenCalledWithAFunctionAsNthParameter(1);
       });
 
       describe("next tick registered function", function() {
@@ -313,7 +321,7 @@ describe("Cucumber.SupportCode.Library", function() {
         describe("when the world constructor called back without any argument", function() {
           beforeEach(function() {
             worldConstructorCompletionCallback();
-            nextTickFunction = process.nextTick.mostRecentCall.args[0];
+            nextTickFunction = later.mostRecentCall.args[0];
           });
 
           it("calls back with the world instance", function() {
@@ -328,7 +336,7 @@ describe("Cucumber.SupportCode.Library", function() {
           beforeEach(function() {
             explicitWorld = createSpy("explicit world object");
             worldConstructorCompletionCallback(explicitWorld);
-            nextTickFunction = process.nextTick.mostRecentCall.args[0];
+            nextTickFunction = later.mostRecentCall.args[0];
           });
 
           it("calls back with the world instance", function() {
